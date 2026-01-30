@@ -1,9 +1,6 @@
 pipeline {
     agent {
-        docker {
-            image 'maven:3.9-eclipse-temurin-17'
-            args '-v $HOME/.m2:/root/.m2'
-        }
+        
     }
     
     parameters {
@@ -30,8 +27,8 @@ pipeline {
     }
     
     environment {
-        BUILD_LABEL = sh(script: "date +%Y%m%d", returnStdout: true).trim()
-        FULL_VERSION = "${params.BASE_VERSION}-${BUILD_LABEL}"
+        BUILD_LABEL = sh(script: "date +%Y%m%d-%H%M%S", returnStdout: true).trim()
+        FULL_VERSION = "${params.BASE_VERSION}"
         ARTIFACT_ID = 'app'
         GROUP_ID = 'com.chat'
         ARTIFACTORY_CREDS = credentials('artifactory-credentials')
@@ -80,9 +77,9 @@ pipeline {
                         echo "All required files present!"
                     """
                     
-                    // Update POM version
+                    // Update POM version with timestamp
                     sh """
-                        mvn versions:set -DnewVersion=${env.FULL_VERSION} -DgenerateBackupPoms=false
+                        mvn versions:set -DnewVersion=${env.BUILD_LABEL} -DgenerateBackupPoms=false
                         echo "Updated POM version:"
                         cat pom.xml | grep -A 1 '<version>' | head -3
                     """
@@ -125,7 +122,7 @@ pipeline {
                     // Verify JAR was created
                     sh """
                         echo "Verifying JAR file..."
-                        ls -lh target/${env.ARTIFACT_ID}-${env.FULL_VERSION}.jar
+                        ls -lh target/${env.ARTIFACT_ID}-${env.BUILD_LABEL}.jar
                         echo "JAR file created successfully!"
                     """
                 }
@@ -149,16 +146,16 @@ pipeline {
                         # Create the ZIP
                         echo "Creating ZIP file..."
                         cd docker-context
-                        zip -r ../docker-context-${env.FULL_VERSION}.zip .
+                        zip -r ../docker-context-${env.BUILD_LABEL}.zip .
                         cd ..
                         
                         # Verify
                         echo "=========================================="
                         echo "Docker context ZIP created:"
-                        ls -lh docker-context-${env.FULL_VERSION}.zip
+                        ls -lh docker-context-${env.BUILD_LABEL}.zip
                         echo "=========================================="
                         echo "Contents of docker-context.zip:"
-                        unzip -l docker-context-${env.FULL_VERSION}.zip
+                        unzip -l docker-context-${env.BUILD_LABEL}.zip
                         echo "=========================================="
                         
                         # Cleanup
@@ -179,26 +176,26 @@ pipeline {
         //             echo "Uploading JAR file..."
         //             sh """
         //                 curl -f -u ${ARTIFACTORY_CREDS_USR}:${ARTIFACTORY_CREDS_PSW} \
-        //                 -T target/${env.ARTIFACT_ID}-${env.FULL_VERSION}.jar \
-        //                 "${artifactoryUrl}/${jarPath}/${env.ARTIFACT_ID}-${env.FULL_VERSION}.jar"
+        //                 -T target/${env.ARTIFACT_ID}-${env.BUILD_LABEL}.jar \
+        //                 "${artifactoryUrl}/${jarPath}/${env.ARTIFACT_ID}-${env.BUILD_LABEL}.jar"
         //             """
                     
         //             // Upload docker-context.zip
         //             echo "Uploading docker-context.zip..."
         //             sh """
         //                 curl -f -u ${ARTIFACTORY_CREDS_USR}:${ARTIFACTORY_CREDS_PSW} \
-        //                 -T docker-context-${env.FULL_VERSION}.zip \
-        //                 "${artifactoryUrl}/${jarPath}/docker-context-${env.FULL_VERSION}.zip"
+        //                 -T docker-context-${env.BUILD_LABEL}.zip \
+        //                 "${artifactoryUrl}/${jarPath}/docker-context-${env.BUILD_LABEL}.zip"
         //             """
                     
         //             echo "=========================================="
         //             echo "✅ Artifacts uploaded successfully!"
         //             echo "=========================================="
         //             echo "JAR URL:"
-        //             echo "${artifactoryUrl}/${jarPath}/${env.ARTIFACT_ID}-${env.FULL_VERSION}.jar"
+        //             echo "${artifactoryUrl}/${jarPath}/${env.ARTIFACT_ID}-${env.BUILD_LABEL}.jar"
         //             echo ""
         //             echo "Docker Context ZIP URL:"
-        //             echo "${artifactoryUrl}/${jarPath}/docker-context-${env.FULL_VERSION}.zip"
+        //             echo "${artifactoryUrl}/${jarPath}/docker-context-${env.BUILD_LABEL}.zip"
         //             echo "=========================================="
         //         }
         //     }
@@ -239,8 +236,9 @@ pipeline {
             ✅ BUILD SUCCESSFUL
             ========================================
             Version: ${env.FULL_VERSION}
-            JAR: ${env.ARTIFACT_ID}-${env.FULL_VERSION}.jar
-            Docker Context: docker-context-${env.FULL_VERSION}.zip
+            Build Label: ${env.BUILD_LABEL}
+            JAR: ${env.ARTIFACT_ID}-${env.BUILD_LABEL}.jar
+            Docker Context: docker-context-${env.BUILD_LABEL}.zip
             Git Commit: ${env.GIT_COMMIT_SHA}
             Git Branch: ${env.GIT_BRANCH}
             ========================================
@@ -258,7 +256,7 @@ pipeline {
         }
         always {
             // Archive artifacts
-            archiveArtifacts artifacts: "target/${env.ARTIFACT_ID}-${env.FULL_VERSION}.jar, docker-context-${env.FULL_VERSION}.zip", 
+            archiveArtifacts artifacts: "target/${env.ARTIFACT_ID}-${env.BUILD_LABEL}.jar, docker-context-${env.BUILD_LABEL}.zip",
                              allowEmptyArchive: false,
                              fingerprint: true
             
