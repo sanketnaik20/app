@@ -1,6 +1,9 @@
 pipeline {
     agent {
-       label 'maven-agent'
+         docker {
+            image 'maven:3.9-eclipse-temurin-17'
+            args '-v maven-cache:/root/.m2'
+        }
     }
     
     parameters {
