@@ -17,16 +17,16 @@ pipeline {
             defaultValue: 'na.artifactory.swg-devops.com/artifactory/ip-devops-team-sandbox-maven-local',
             description: 'Artifactory Maven repository URL'
         )
-        string(
-            name: 'DOCKER_PIPELINE_NAME',
-            defaultValue: 'docker-build-pipeline',
-            description: 'Name of the Docker build pipeline to trigger'
-        )
-        booleanParam(
-            name: 'TRIGGER_DOCKER_BUILD',
-            defaultValue: true,
-            description: 'Automatically trigger Docker build pipeline after successful Maven build'
-        )
+        // string(
+        //     name: 'DOCKER_PIPELINE_NAME',
+        //     defaultValue: 'docker-build-pipeline',
+        //     description: 'Name of the Docker build pipeline to trigger'
+        // )
+        // booleanParam(
+        //     name: 'TRIGGER_DOCKER_BUILD',
+        //     defaultValue: true,
+        //     description: 'Automatically trigger Docker build pipeline after successful Maven build'
+        // )
     }
     
     environment {
@@ -172,68 +172,68 @@ pipeline {
             }
         }
         
-        // stage('Deploy to Artifactory') {
-        //     steps {
-        //         echo "Uploading artifacts to Artifactory..."
-        //         script {
-        //             def artifactoryUrl = "https://${params.ARTIFACTORY_MAVEN_URL}"
-        //             def jarPath = "hello-world/${env.GROUP_ID.replace('.', '/')}/${env.ARTIFACT_ID}/${env.FULL_VERSION}"
-                    
-        //             // Upload JAR
-        //             echo "Uploading JAR file..."
-        //             sh """
-        //                 curl -f -u ${ARTIFACTORY_CREDS_USR}:${ARTIFACTORY_CREDS_PSW} \
-        //                 -T target/${env.ARTIFACT_ID}-${env.BUILD_LABEL}.jar \
-        //                 "${artifactoryUrl}/${jarPath}/${env.ARTIFACT_ID}-${env.BUILD_LABEL}.jar"
-        //             """
-                    
-        //             // Upload docker-context.zip
-        //             echo "Uploading docker-context.zip..."
-        //             sh """
-        //                 curl -f -u ${ARTIFACTORY_CREDS_USR}:${ARTIFACTORY_CREDS_PSW} \
-        //                 -T docker-context-${env.BUILD_LABEL}.zip \
-        //                 "${artifactoryUrl}/${jarPath}/docker-context-${env.BUILD_LABEL}.zip"
-        //             """
-                    
-        //             echo "=========================================="
-        //             echo "✅ Artifacts uploaded successfully!"
-        //             echo "=========================================="
-        //             echo "JAR URL:"
-        //             echo "${artifactoryUrl}/${jarPath}/${env.ARTIFACT_ID}-${env.BUILD_LABEL}.jar"
-        //             echo ""
-        //             echo "Docker Context ZIP URL:"
-        //             echo "${artifactoryUrl}/${jarPath}/docker-context-${env.BUILD_LABEL}.zip"
-        //             echo "=========================================="
-        //         }
-        //     }
-        // }
-        
-        stage('Trigger Docker Build') {
-            when {
-                expression { params.TRIGGER_DOCKER_BUILD == true }
-            }
+        stage('Deploy to Artifactory') {
             steps {
-                echo "Triggering Docker build pipeline..."
+                echo "Uploading artifacts to Artifactory..."
                 script {
-                    build job: params.DOCKER_PIPELINE_NAME,
-                        parameters: [
-                            string(name: 'FULL_VERSION', value: env.FULL_VERSION),
-                            string(name: 'BUILD_LABEL', value: env.BUILD_LABEL),
-                            string(name: 'ARTIFACT_ID', value: env.ARTIFACT_ID),
-                            string(name: 'GROUP_ID', value: env.GROUP_ID),
-                            string(name: 'GIT_COMMIT_SHA', value: env.GIT_COMMIT_SHA),
-                            string(name: 'GIT_BRANCH', value: env.GIT_BRANCH)
-                        ],
-                        wait: false
+                    def artifactoryUrl = "https://${params.ARTIFACTORY_MAVEN_URL}"
+                    def jarPath = "hello-world/${env.GROUP_ID.replace('.', '/')}/${env.ARTIFACT_ID}/${env.FULL_VERSION}"
+                    
+                    // Upload JAR
+                    echo "Uploading JAR file..."
+                    sh """
+                        curl -f -u ${ARTIFACTORY_CREDS_USR}:${ARTIFACTORY_CREDS_PSW} \
+                        -T target/${env.ARTIFACT_ID}-${env.BUILD_LABEL}.jar \
+                        "${artifactoryUrl}/${jarPath}/${env.ARTIFACT_ID}-${env.BUILD_LABEL}.jar"
+                    """
+                    
+                    // Upload docker-context.zip
+                    echo "Uploading docker-context.zip..."
+                    sh """
+                        curl -f -u ${ARTIFACTORY_CREDS_USR}:${ARTIFACTORY_CREDS_PSW} \
+                        -T docker-context-${env.BUILD_LABEL}.zip \
+                        "${artifactoryUrl}/${jarPath}/docker-context-${env.BUILD_LABEL}.zip"
+                    """
                     
                     echo "=========================================="
-                    echo "✅ Docker build pipeline triggered!"
-                    echo "Pipeline: ${params.DOCKER_PIPELINE_NAME}"
-                    echo "Version: ${env.FULL_VERSION}"
+                    echo "✅ Artifacts uploaded successfully!"
+                    echo "=========================================="
+                    echo "JAR URL:"
+                    echo "${artifactoryUrl}/${jarPath}/${env.ARTIFACT_ID}-${env.BUILD_LABEL}.jar"
+                    echo ""
+                    echo "Docker Context ZIP URL:"
+                    echo "${artifactoryUrl}/${jarPath}/docker-context-${env.BUILD_LABEL}.zip"
                     echo "=========================================="
                 }
             }
         }
+        
+        // stage('Trigger Docker Build') {
+        //     when {
+        //         expression { params.TRIGGER_DOCKER_BUILD == true }
+        //     }
+        //     steps {
+        //         echo "Triggering Docker build pipeline..."
+        //         script {
+        //             build job: params.DOCKER_PIPELINE_NAME,
+        //                 parameters: [
+        //                     string(name: 'FULL_VERSION', value: env.FULL_VERSION),
+        //                     string(name: 'BUILD_LABEL', value: env.BUILD_LABEL),
+        //                     string(name: 'ARTIFACT_ID', value: env.ARTIFACT_ID),
+        //                     string(name: 'GROUP_ID', value: env.GROUP_ID),
+        //                     string(name: 'GIT_COMMIT_SHA', value: env.GIT_COMMIT_SHA),
+        //                     string(name: 'GIT_BRANCH', value: env.GIT_BRANCH)
+        //                 ],
+        //                 wait: false
+                    
+        //             echo "=========================================="
+        //             echo "✅ Docker build pipeline triggered!"
+        //             echo "Pipeline: ${params.DOCKER_PIPELINE_NAME}"
+        //             echo "Version: ${env.FULL_VERSION}"
+        //             echo "=========================================="
+        //         }
+        //     }
+        // }
     }
     
     post {
