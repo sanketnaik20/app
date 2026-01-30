@@ -143,6 +143,8 @@ pipeline {
                             apt-get update -y
                             apt-get install -y zip
                         fi
+
+                        mkdir docker-context
                         # Copy required files
                         cp Dockerfile docker-context/
                         cp entrypoint.sh docker-context/
