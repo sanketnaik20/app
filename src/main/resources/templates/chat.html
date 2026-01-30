@@ -2,75 +2,640 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Real-Time Chat Application</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BRUTALIST CHAT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.1/stomp.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #FEF3E2;
+            --bg-secondary: #FFFFFF;
+            --accent-yellow: #FFE156;
+            --accent-blue: #4ECDC4;
+            --accent-pink: #FF6B9D;
+            --accent-purple: #A855F7;
+            --accent-orange: #FF8C42;
+            --text-primary: #1A1A1A;
+            --border-color: #1A1A1A;
+            --shadow-offset: 6px;
+            --border-width: 4px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(78, 205, 196, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 107, 157, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(168, 85, 247, 0.1) 0%, transparent 40%);
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--bg-secondary);
+            border: var(--border-width) solid var(--border-color);
+            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--border-color);
+            position: relative;
+        }
+
+        /* Header */
+        .chat-header {
+            background: var(--accent-yellow);
+            border-bottom: var(--border-width) solid var(--border-color);
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-primary);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background: #22C55E;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.offline {
+            background: #EF4444;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+        }
+
+        /* Chat Messages Area */
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 39px,
+                rgba(0,0,0,0.03) 39px,
+                rgba(0,0,0,0.03) 40px
+            );
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+            border-left: var(--border-width) solid var(--border-color);
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: var(--accent-purple);
+            border: 2px solid var(--border-color);
+        }
+
+        .message {
+            margin-bottom: 16px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-bubble {
+            display: inline-block;
+            max-width: 80%;
+            padding: 12px 16px;
+            border: 3px solid var(--border-color);
+            background: var(--bg-secondary);
+            box-shadow: 4px 4px 0 var(--border-color);
+            position: relative;
+        }
+
+        .message-bubble.own {
+            background: var(--accent-blue);
+            margin-left: auto;
+            display: block;
+            text-align: right;
+        }
+
+        .message-bubble.other {
+            background: var(--accent-pink);
+        }
+
+        .message-sender {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            opacity: 0.8;
+        }
+
+        .message-content {
+            font-size: 0.95rem;
+            line-height: 1.4;
+            font-weight: 500;
+            word-wrap: break-word;
+        }
+
+        .message-time {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65rem;
+            opacity: 0.6;
+            margin-top: 6px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+        }
+
+        .empty-state-text {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.6;
+        }
+
+        /* Input Area */
+        .chat-input-area {
+            border-top: var(--border-width) solid var(--border-color);
+            padding: 20px;
+            background: var(--bg-secondary);
+        }
+
+        .name-input-wrapper {
+            margin-bottom: 12px;
+        }
+
+        .input-label {
+            display: block;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+        }
+
+        .brutalist-input {
+            width: 100%;
+            padding: 14px 16px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            border: 3px solid var(--border-color);
+            background: var(--bg-secondary);
+            box-shadow: 4px 4px 0 var(--border-color);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .brutalist-input:focus {
+            box-shadow: 6px 6px 0 var(--border-color);
+            transform: translate(-2px, -2px);
+        }
+
+        .brutalist-input::placeholder {
+            color: rgba(26, 26, 26, 0.4);
+            font-weight: 400;
+        }
+
+        .brutalist-input.name-input {
+            background: var(--accent-yellow);
+        }
+
+        .message-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .message-input-wrapper {
+            flex: 1;
+        }
+
+        .brutalist-btn {
+            padding: 14px 28px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border: 3px solid var(--border-color);
+            background: var(--accent-orange);
+            color: var(--text-primary);
+            box-shadow: 4px 4px 0 var(--border-color);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .brutalist-btn:hover:not(:disabled) {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 var(--border-color);
+        }
+
+        .brutalist-btn:active:not(:disabled) {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 var(--border-color);
+        }
+
+        .brutalist-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .brutalist-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .brutalist-btn:hover::before {
+            left: 100%;
+        }
+
+        /* Decorative Elements */
+        .corner-decoration {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--border-color);
+        }
+
+        .corner-decoration.top-left {
+            top: -10px;
+            left: -10px;
+            background: var(--accent-pink);
+            transform: rotate(45deg);
+        }
+
+        .corner-decoration.top-right {
+            top: -10px;
+            right: -10px;
+            background: var(--accent-blue);
+            transform: rotate(45deg);
+        }
+
+        .corner-decoration.bottom-left {
+            bottom: -10px;
+            left: -10px;
+            background: var(--accent-purple);
+            transform: rotate(45deg);
+        }
+
+        .corner-decoration.bottom-right {
+            bottom: -10px;
+            right: -10px;
+            background: var(--accent-orange);
+            transform: rotate(45deg);
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: none;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+        }
+
+        .typing-indicator.active {
+            display: block;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-purple);
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-8px); }
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .chat-container {
+                box-shadow: 4px 4px 0 var(--border-color);
+            }
+
+            .chat-header h1 {
+                font-size: 1.1rem;
+            }
+
+            .chat-messages {
+                height: 350px;
+            }
+
+            .message-row {
+                flex-direction: column;
+            }
+
+            .brutalist-btn {
+                width: 100%;
+            }
+        }
+
+        /* Fun hover effects */
+        .message-bubble:hover {
+            transform: rotate(-0.5deg);
+        }
+
+        /* Random background patterns */
+        .pattern-strip {
+            height: 8px;
+            background: repeating-linear-gradient(
+                90deg,
+                var(--accent-yellow) 0,
+                var(--accent-yellow) 20px,
+                var(--accent-pink) 20px,
+                var(--accent-pink) 40px,
+                var(--accent-blue) 40px,
+                var(--accent-blue) 60px,
+                var(--accent-purple) 60px,
+                var(--accent-purple) 80px
+            );
+            border-bottom: var(--border-width) solid var(--border-color);
+        }
+    </style>
 </head>
 <body>
-      <div class="container mt-4">
-        <h1 class="text-center">Real-Time Chat Application</h1>
-        <div id="chat" 
-        class="border rounded p-3 mb-3"
-        style="height: 300px; overflow-y: auto;">
+    <div class="chat-container">
+        <!-- Corner Decorations -->
+        <div class="corner-decoration top-left"></div>
+        <div class="corner-decoration top-right"></div>
+        <div class="corner-decoration bottom-left"></div>
+        <div class="corner-decoration bottom-right"></div>
+
+        <!-- Pattern Strip -->
+        <div class="pattern-strip"></div>
+
+        <!-- Header -->
+        <div class="chat-header">
+            <h1>💬 BRUTALIST CHAT</h1>
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">CONNECTED</span>
+            </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="chat-messages" id="chat">
+            <div class="empty-state" id="emptyState">
+                <div class="empty-state-icon">📭</div>
+                <div class="empty-state-text">No messages yet.<br>Start the conversation!</div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chat-input-area">
+            <div class="name-input-wrapper">
+                <label class="input-label" for="senderInput">Your Name</label>
+                <input 
+                    type="text" 
+                    id="senderInput" 
+                    class="brutalist-input name-input" 
+                    placeholder="Enter your name..."
+                    maxlength="20"
+                >
+            </div>
+            <div class="message-row">
+                <div class="message-input-wrapper">
+                    <input 
+                        type="text" 
+                        id="messageInput" 
+                        class="brutalist-input" 
+                        placeholder="Type something bold..."
+                        maxlength="500"
+                    >
+                </div>
+                <button id="sendMessage" class="brutalist-btn" disabled>
+                    SEND →
+                </button>
+            </div>
+        </div>
+
+        <!-- Bottom Pattern -->
+        <div class="pattern-strip" style="border-top: var(--border-width) solid var(--border-color); border-bottom: none;"></div>
     </div>
 
-    <div class="input-group mb-3">
-        <input id="senderInput" type="text" class="form-control" placeholder="Your Name...">
-    </div>
+    <script>
+        let stompClient = null;
+        let currentUser = '';
 
-
-    <div class="input-group mb-3">
-        <input id="messageInput" type="text" class="form-control" placeholder="Type a Message"/>
-    </div>
-
-    <div id="input-group-append">
-        <button id="sendMessage" class="btn btn-primary">Send</button>
-    </div>
-      </div>
-</body>
-
-<script>
-    function setConnected(connected){
-        document.getElementById('sendMessage').disabled=!connected;
-    }
-     
-
-    function connect(){
-        var socket=new SockJS('/chat');
-        stompClient=Stomp.over(socket);
-        stompClient.connect({},function(frame){
-            setConnected(true);
-
-            stompClient.subscribe('/topic/messages',function(message){
-              showMessage(JSON.parse(message.body));
-            });
-
-        });
-    }
-
-    function showMessage(message){
-        var chat=document.getElementById('chat');
-        var messageElement=document.createElement('div');
-        messageElement.textContent=message.sender + ' : ' + message.content;
-        messageElement.className="border-border mb-1";
-        chat.appendChild(messageElement);
-        chat.scrollTop=chat.scrollHeight;
-    }
-
-
-    function sendMessage(){
-        var sender=document.getElementById('senderInput').value;
-        var content=document.getElementById('messageInput').value;
-        var chatMessage={
-            sender: sender,
-            content:content
+        function setConnected(connected) {
+            const sendBtn = document.getElementById('sendMessage');
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            sendBtn.disabled = !connected;
+            
+            if (connected) {
+                statusDot.classList.remove('offline');
+                statusText.textContent = 'CONNECTED';
+            } else {
+                statusDot.classList.add('offline');
+                statusText.textContent = 'OFFLINE';
+            }
         }
-        stompClient.send("/app/sendMessage",{},JSON.stringify(chatMessage));
-        document.getElementById('messageInput').value='';
-    }
 
-    document.getElementById('sendMessage').onclick=sendMessage;
-    window.onload=connect;
-</script>
+        function connect() {
+            const socket = new SockJS('/chat');
+            stompClient = Stomp.over(socket);
+            
+            // Disable debug logging
+            stompClient.debug = null;
+            
+            stompClient.connect({}, function(frame) {
+                setConnected(true);
+                stompClient.subscribe('/topic/messages', function(message) {
+                    showMessage(JSON.parse(message.body));
+                });
+            }, function(error) {
+                setConnected(false);
+                // Attempt to reconnect after 5 seconds
+                setTimeout(connect, 5000);
+            });
+        }
+
+        function showMessage(message) {
+            const chat = document.getElementById('chat');
+            const emptyState = document.getElementById('emptyState');
+            
+            // Hide empty state
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            const isOwnMessage = message.sender === currentUser;
+            const bubbleClass = isOwnMessage ? 'own' : 'other';
+            
+            const time = new Date().toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true 
+            });
+            
+            messageDiv.innerHTML = `
+                <div class="message-bubble ${bubbleClass}">
+                    <div class="message-sender">${escapeHtml(message.sender)}</div>
+                    <div class="message-content">${escapeHtml(message.content)}</div>
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+            
+            chat.appendChild(messageDiv);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function sendMessage() {
+            const senderInput = document.getElementById('senderInput');
+            const contentInput = document.getElementById('messageInput');
+            
+            const sender = senderInput.value.trim();
+            const content = contentInput.value.trim();
+            
+            if (!sender) {
+                senderInput.focus();
+                senderInput.style.animation = 'shake 0.5s ease';
+                setTimeout(() => senderInput.style.animation = '', 500);
+                return;
+            }
+            
+            if (!content) {
+                contentInput.focus();
+                return;
+            }
+            
+            currentUser = sender;
+            
+            const chatMessage = {
+                sender: sender,
+                content: content
+            };
+            
+            stompClient.send("/app/sendMessage", {}, JSON.stringify(chatMessage));
+            contentInput.value = '';
+            contentInput.focus();
+        }
+
+        // Event Listeners
+        document.getElementById('sendMessage').addEventListener('click', sendMessage);
+        
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        document.getElementById('senderInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('messageInput').focus();
+            }
+        });
+
+        // Update current user when name changes
+        document.getElementById('senderInput').addEventListener('input', function(e) {
+            currentUser = e.target.value.trim();
+        });
+
+        // Add shake animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+                20%, 40%, 60%, 80% { transform: translateX(4px); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Connect on load
+        window.onload = connect;
+    </script>
+</body>
 </html>
