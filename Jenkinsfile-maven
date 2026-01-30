@@ -134,10 +134,12 @@ pipeline {
                 echo "Creating docker-context.zip..."
                 script {
                     sh """
-                        # Create docker context with minimal files
-                        echo "Creating docker-context directory..."
-                        mkdir -p docker-context
-                        
+                        echo "🔍 Checking zip installation..."
+                        if ! command -v zip &>/dev/null; then
+                            echo "Installing zip..."
+                            sudo apt-get update -y
+                            sudo apt-get install -y zip
+                        fi
                         # Copy required files
                         cp Dockerfile docker-context/
                         cp entrypoint.sh docker-context/
