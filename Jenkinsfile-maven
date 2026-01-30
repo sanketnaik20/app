@@ -168,41 +168,41 @@ pipeline {
             }
         }
         
-        stage('Deploy to Artifactory') {
-            steps {
-                echo "Uploading artifacts to Artifactory..."
-                script {
-                    def artifactoryUrl = "https://${params.ARTIFACTORY_MAVEN_URL}"
-                    def jarPath = "hello-world/${env.GROUP_ID.replace('.', '/')}/${env.ARTIFACT_ID}/${env.FULL_VERSION}"
+        // stage('Deploy to Artifactory') {
+        //     steps {
+        //         echo "Uploading artifacts to Artifactory..."
+        //         script {
+        //             def artifactoryUrl = "https://${params.ARTIFACTORY_MAVEN_URL}"
+        //             def jarPath = "hello-world/${env.GROUP_ID.replace('.', '/')}/${env.ARTIFACT_ID}/${env.FULL_VERSION}"
                     
-                    // Upload JAR
-                    echo "Uploading JAR file..."
-                    sh """
-                        curl -f -u ${ARTIFACTORY_CREDS_USR}:${ARTIFACTORY_CREDS_PSW} \
-                        -T target/${env.ARTIFACT_ID}-${env.FULL_VERSION}.jar \
-                        "${artifactoryUrl}/${jarPath}/${env.ARTIFACT_ID}-${env.FULL_VERSION}.jar"
-                    """
+        //             // Upload JAR
+        //             echo "Uploading JAR file..."
+        //             sh """
+        //                 curl -f -u ${ARTIFACTORY_CREDS_USR}:${ARTIFACTORY_CREDS_PSW} \
+        //                 -T target/${env.ARTIFACT_ID}-${env.FULL_VERSION}.jar \
+        //                 "${artifactoryUrl}/${jarPath}/${env.ARTIFACT_ID}-${env.FULL_VERSION}.jar"
+        //             """
                     
-                    // Upload docker-context.zip
-                    echo "Uploading docker-context.zip..."
-                    sh """
-                        curl -f -u ${ARTIFACTORY_CREDS_USR}:${ARTIFACTORY_CREDS_PSW} \
-                        -T docker-context-${env.FULL_VERSION}.zip \
-                        "${artifactoryUrl}/${jarPath}/docker-context-${env.FULL_VERSION}.zip"
-                    """
+        //             // Upload docker-context.zip
+        //             echo "Uploading docker-context.zip..."
+        //             sh """
+        //                 curl -f -u ${ARTIFACTORY_CREDS_USR}:${ARTIFACTORY_CREDS_PSW} \
+        //                 -T docker-context-${env.FULL_VERSION}.zip \
+        //                 "${artifactoryUrl}/${jarPath}/docker-context-${env.FULL_VERSION}.zip"
+        //             """
                     
-                    echo "=========================================="
-                    echo "✅ Artifacts uploaded successfully!"
-                    echo "=========================================="
-                    echo "JAR URL:"
-                    echo "${artifactoryUrl}/${jarPath}/${env.ARTIFACT_ID}-${env.FULL_VERSION}.jar"
-                    echo ""
-                    echo "Docker Context ZIP URL:"
-                    echo "${artifactoryUrl}/${jarPath}/docker-context-${env.FULL_VERSION}.zip"
-                    echo "=========================================="
-                }
-            }
-        }
+        //             echo "=========================================="
+        //             echo "✅ Artifacts uploaded successfully!"
+        //             echo "=========================================="
+        //             echo "JAR URL:"
+        //             echo "${artifactoryUrl}/${jarPath}/${env.ARTIFACT_ID}-${env.FULL_VERSION}.jar"
+        //             echo ""
+        //             echo "Docker Context ZIP URL:"
+        //             echo "${artifactoryUrl}/${jarPath}/docker-context-${env.FULL_VERSION}.zip"
+        //             echo "=========================================="
+        //         }
+        //     }
+        // }
         
         stage('Trigger Docker Build') {
             when {
