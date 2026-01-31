@@ -175,62 +175,62 @@ pipeline {
         // ====================================================================
         // Stage 3: Extract Context
         // ====================================================================
-        // stage('Extract Context') {
-        //     steps {
-        //         script {
-        //             echo "=========================================="
-        //             echo "STAGE 3: Extract Docker Context"
-        //             echo "=========================================="
+        stage('Extract Context') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "STAGE 3: Extract Docker Context"
+                    echo "=========================================="
                     
-        //             def contextZipFile = "docker-context-${params.BUILD_LABEL}.zip"
+                    def contextZipFile = "docker-context-${params.BUILD_LABEL}.zip"
                     
-        //             echo "Extracting ${contextZipFile}..."
+                    echo "Extracting ${contextZipFile}..."
                     
-        //             // Extract docker-context.zip
-        //             sh """
-        //                 unzip -o ${contextZipFile}
+                    // Extract docker-context.zip
+                    sh """
+                        unzip -o ${contextZipFile}
                         
-        //                 echo ""
-        //                 echo "Extracted files:"
-        //                 ls -lh
-        //             """
+                        echo ""
+                        echo "Extracted files:"
+                        ls -lh
+                    """
                     
-        //             // Verify required files exist
-        //             sh """
-        //                 echo ""
-        //                 echo "Verifying required files..."
+                    // Verify required files exist
+                    sh """
+                        echo ""
+                        echo "Verifying required files..."
                         
-        //                 if [ ! -f Dockerfile ]; then
-        //                     echo "ERROR: Dockerfile not found in docker-context.zip"
-        //                     exit 1
-        //                 fi
-        //                 echo "✓ Dockerfile found"
+                        if [ ! -f Dockerfile ]; then
+                            echo "ERROR: Dockerfile not found in docker-context.zip"
+                            exit 1
+                        fi
+                        echo "✓ Dockerfile found"
                         
-        //                 if [ ! -f entrypoint.sh ]; then
-        //                     echo "ERROR: entrypoint.sh not found in docker-context.zip"
-        //                     exit 1
-        //                 fi
-        //                 echo "✓ entrypoint.sh found"
+                        if [ ! -f entrypoint.sh ]; then
+                            echo "ERROR: entrypoint.sh not found in docker-context.zip"
+                            exit 1
+                        fi
+                        echo "✓ entrypoint.sh found"
                         
-        //                 if [ ! -f .dockerignore ]; then
-        //                     echo "WARNING: .dockerignore not found (optional)"
-        //                 else
-        //                     echo "✓ .dockerignore found"
-        //                 fi
+                        if [ ! -f .dockerignore ]; then
+                            echo "WARNING: .dockerignore not found (optional)"
+                        else
+                            echo "✓ .dockerignore found"
+                        fi
                         
-        //                 echo ""
-        //                 echo "All required files verified!"
-        //             """
+                        echo ""
+                        echo "All required files verified!"
+                    """
                     
-        //             // Display Dockerfile content for verification
-        //             echo ""
-        //             echo "Dockerfile preview (first 20 lines):"
-        //             sh "head -20 Dockerfile"
+                    // Display Dockerfile content for verification
+                    echo ""
+                    echo "Dockerfile preview (first 20 lines):"
+                    sh "head -20 Dockerfile"
                     
-        //             echo "=========================================="
-        //         }
-        //     }
-        // }
+                    echo "=========================================="
+                }
+            }
+        }
         
         // ====================================================================
         // Stage 4: Build Docker Image
