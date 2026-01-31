@@ -17,16 +17,16 @@ pipeline {
             defaultValue: 'na.artifactory.swg-devops.com/artifactory/ip-devops-team-sandbox-maven-local',
             description: 'Artifactory Maven repository URL'
         )
-        // string(
-        //     name: 'DOCKER_PIPELINE_NAME',
-        //     defaultValue: 'docker-build-pipeline',
-        //     description: 'Name of the Docker build pipeline to trigger'
-        // )
-        // booleanParam(
-        //     name: 'TRIGGER_DOCKER_BUILD',
-        //     defaultValue: true,
-        //     description: 'Automatically trigger Docker build pipeline after successful Maven build'
-        // )
+        string(
+            name: 'DOCKER_PIPELINE_NAME',
+            defaultValue: 'app-docker-build',
+            description: 'Name of the Docker build pipeline to trigger'
+        )
+        booleanParam(
+            name: 'TRIGGER_DOCKER_BUILD',
+            defaultValue: true,
+            description: 'Automatically trigger Docker build pipeline after successful Maven build'
+        )
     }
     
     environment {
@@ -208,32 +208,30 @@ pipeline {
             }
         }
         
-        // stage('Trigger Docker Build') {
-        //     when {
-        //         expression { params.TRIGGER_DOCKER_BUILD == true }
-        //     }
-        //     steps {
-        //         echo "Triggering Docker build pipeline..."
-        //         script {
-        //             build job: params.DOCKER_PIPELINE_NAME,
-        //                 parameters: [
-        //                     string(name: 'FULL_VERSION', value: env.FULL_VERSION),
-        //                     string(name: 'BUILD_LABEL', value: env.BUILD_LABEL),
-        //                     string(name: 'ARTIFACT_ID', value: env.ARTIFACT_ID),
-        //                     string(name: 'GROUP_ID', value: env.GROUP_ID),
-        //                     string(name: 'GIT_COMMIT_SHA', value: env.GIT_COMMIT_SHA),
-        //                     string(name: 'GIT_BRANCH', value: env.GIT_BRANCH)
-        //                 ],
-        //                 wait: false
+        stage('Trigger Docker Build') {
+            when {
+                expression { params.TRIGGER_DOCKER_BUILD == true }
+            }
+            steps {
+                echo "Triggering Docker build pipeline..."
+                script {
+                    build job: params.DOCKER_PIPELINE_NAME,
+                        parameters: [
+                            string(name: 'FULL_VERSION', value: env.FULL_VERSION),
+                            string(name: 'BUILD_LABEL', value: env.BUILD_LABEL),
+                            string(name: 'ARTIFACT_ID', value: env.ARTIFACT_ID),
+                            string(name: 'GROUP_ID', value: env.GROUP_ID),
+                        ],
+                        wait: false
                     
-        //             echo "=========================================="
-        //             echo "✅ Docker build pipeline triggered!"
-        //             echo "Pipeline: ${params.DOCKER_PIPELINE_NAME}"
-        //             echo "Version: ${env.FULL_VERSION}"
-        //             echo "=========================================="
-        //         }
-        //     }
-        // }
+                    echo "=========================================="
+                    echo "✅ Docker build pipeline triggered!"
+                    echo "Pipeline: ${params.DOCKER_PIPELINE_NAME}"
+                    echo "Version: ${env.ARTIFACT_ID}-${env.FULL_VERSION}-${env.BUILD_LABEL}"
+                    echo "=========================================="
+                }
+            }
+        }
     }
     
     post {
