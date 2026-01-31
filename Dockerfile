@@ -1,3 +1,10 @@
+# Multi-Stage Dockerfile for Spring Boot Chat Application
+# Stage 1: Download JAR from Artifactory
+# Stage 2: Create runtime image
+
+# ============================================================================
+# Build Arguments - Define base images
+# ============================================================================
 ARG UBI_IMAGE=ubi8/ubi:8.10
 
 # ============================================================================
@@ -24,19 +31,20 @@ RUN dnf update -y \
 WORKDIR /work
 
 # Download the application jar with original name from Artifactory
+# Note: JAR filename uses BUILD_LABEL, but stored under FULL_VERSION path
 RUN echo "========================================" \
     && echo "Downloading JAR from Artifactory" \
     && echo "========================================" \
-    && echo "Artifact: ${GROUP_ID}/${ARTIFACT_ID}/${FULL_VERSION}" \
-    && echo "JAR Name: ${ARTIFACT_ID}-${FULL_VERSION}.jar" \
-    && echo "URL: https://${ARTIFACTORY_MAVEN_URL}/hello-world/${GROUP_ID}/${ARTIFACT_ID}/${FULL_VERSION}/${ARTIFACT_ID}-${FULL_VERSION}.jar" \
+    && echo "Artifact Path: ${GROUP_ID}/${ARTIFACT_ID}/${FULL_VERSION}" \
+    && echo "JAR Name: ${ARTIFACT_ID}-${BUILD_LABEL}.jar" \
+    && echo "URL: https://${ARTIFACTORY_MAVEN_URL}/hello-world/${GROUP_ID}/${ARTIFACT_ID}/${FULL_VERSION}/${ARTIFACT_ID}-${BUILD_LABEL}.jar" \
     && echo "========================================" \
     && curl -f -u ${ARTIFACTORY_USER}:${ARTIFACTORY_PASSWORD} \
-       -o ${ARTIFACT_ID}-${FULL_VERSION}.jar \
-       "https://${ARTIFACTORY_MAVEN_URL}/hello-world/${GROUP_ID}/${ARTIFACT_ID}/${FULL_VERSION}/${ARTIFACT_ID}-${FULL_VERSION}.jar" \
+       -o ${ARTIFACT_ID}-${BUILD_LABEL}.jar \
+       "https://${ARTIFACTORY_MAVEN_URL}/hello-world/${GROUP_ID}/${ARTIFACT_ID}/${FULL_VERSION}/${ARTIFACT_ID}-${BUILD_LABEL}.jar" \
     && echo "========================================" \
     && echo "Download successful!" \
-    && ls -lh ${ARTIFACT_ID}-${FULL_VERSION}.jar \
+    && ls -lh ${ARTIFACT_ID}-${BUILD_LABEL}.jar \
     && echo "========================================"
 
 # ============================================================================
@@ -68,12 +76,12 @@ LABEL name="chat-app" \
       summary="Spring Boot Chat Application" \
       description="WebSocket-based real-time chat application built with Spring Boot"
 
-# Environment variable for JAR name (keeps original name from Artifactory)
-ENV APP_JAR="${ARTIFACT_ID}-${FULL_VERSION}.jar"
+# Environment variable for JAR name (uses BUILD_LABEL for filename)
+ENV APP_JAR="${ARTIFACT_ID}-${BUILD_LABEL}.jar"
 
-# Copy entrypoint script and JAR from initial stage (with original name)
+# Copy entrypoint script and JAR from initial stage (with BUILD_LABEL in filename)
 COPY entrypoint.sh /work/
-COPY --from=initial /work/${ARTIFACT_ID}-${FULL_VERSION}.jar /work/
+COPY --from=initial /work/${ARTIFACT_ID}-${BUILD_LABEL}.jar /work/
 
 # Upgrade the image, install Java, and set permissions
 RUN dnf clean all \

@@ -1,0 +1,452 @@
+// ============================================================================
+// Pipeline 2: Docker Build and Push
+// ============================================================================
+// Purpose: Download docker-context.zip from Artifactory, build Docker image
+//          (downloading JAR from Artifactory during build), and push to registry
+// 
+// Triggered by: Pipeline 1 (Jenkinsfile-maven) or manually
+// ============================================================================
+
+pipeline {
+    agent any
+    
+    // ========================================================================
+    // Pipeline Parameters
+    // ========================================================================
+    parameters {
+        string(
+            name: 'FULL_VERSION',
+            defaultValue: '',
+            description: 'Full version from Pipeline 1 (e.g., 1.0.0-20260129). Required.'
+        )
+        string(
+            name: 'BUILD_LABEL',
+            defaultValue: '',
+            description: 'Build label (YYYYMMDD). Required.'
+        )
+        string(
+            name: 'ARTIFACT_ID',
+            defaultValue: 'app',
+            description: 'Maven artifact ID'
+        )
+        string(
+            name: 'GROUP_ID',
+            defaultValue: 'com.chat',
+            description: 'Maven group ID'
+        )
+        string(
+            name: 'ARTIFACTORY_MAVEN_URL',
+            defaultValue: 'na.artifactory.swg-devops.com/artifactory/ip-devops-team-sandbox-maven-local',
+            description: 'Artifactory Maven repository URL'
+        )
+        string(
+            name: 'ARTIFACTORY_DOCKER_URL',
+            defaultValue: 'na.artifactory.swg-devops.com/artifactory/ip-devops-team-sandbox-dev-docker-local',
+            description: 'Artifactory Docker registry URL'
+        )
+        string(
+            name: 'IMAGE_NAME',
+            defaultValue: 'chat-app',
+            description: 'Docker image name'
+        )
+    }
+    
+    // ========================================================================
+    // Environment Variables
+    // ========================================================================
+    environment {
+        // Artifactory credentials
+        ARTIFACTORY_CREDS = credentials('artifactory-credentials')
+        
+        // Docker registry
+        DOCKER_REGISTRY = "${params.ARTIFACTORY_DOCKER_URL}"
+        
+        // Git information
+        GIT_COMMIT_SHA = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+        GIT_BRANCH = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+        GIT_TAG = sh(script: 'git describe --tags --always', returnStdout: true).trim()
+        GIT_REPOSITORY = sh(script: 'git config --get remote.origin.url', returnStdout: true).trim()
+        
+        // Workspace cleanup
+        WORKSPACE_CLEAN = 'true'
+    }
+    
+    // ========================================================================
+    // Pipeline Options
+    // ========================================================================
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timestamps()
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+    }
+    
+    // ========================================================================
+    // Pipeline Stages
+    // ========================================================================
+    stages {
+        
+        // ====================================================================
+        // Stage 1: Validate Parameters
+        // ====================================================================
+        stage('Validate Parameters') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "STAGE 1: Validate Parameters"
+                    echo "=========================================="
+                    
+                    // Check required parameters
+                    if (!params.FULL_VERSION || params.FULL_VERSION.trim() == '') {
+                        error("FULL_VERSION parameter is required!")
+                    }
+                    
+                    if (!params.BUILD_LABEL || params.BUILD_LABEL.trim() == '') {
+                        error("BUILD_LABEL parameter is required!")
+                    }
+                    
+                    // Display build information
+                    echo "Build Information:"
+                    echo "  Full Version: ${params.FULL_VERSION}"
+                    echo "  Build Label: ${params.BUILD_LABEL}"
+                    echo "  Artifact ID: ${params.ARTIFACT_ID}"
+                    echo "  Group ID: ${params.GROUP_ID}"
+                    echo "  Image Name: ${params.IMAGE_NAME}"
+                    echo ""
+                    echo "Artifactory Configuration:"
+                    echo "  Maven URL: ${params.ARTIFACTORY_MAVEN_URL}"
+                    echo "  Docker URL: ${params.ARTIFACTORY_DOCKER_URL}"
+                    echo ""
+                    echo "Git Information:"
+                    echo "  Repository: ${env.GIT_REPOSITORY}"
+                    echo "  Branch: ${env.GIT_BRANCH}"
+                    echo "  Commit SHA: ${env.GIT_COMMIT_SHA}"
+                    echo "  Tag: ${env.GIT_TAG}"
+                    echo "=========================================="
+                }
+            }
+        }
+        
+        // ====================================================================
+        // Stage 2: Download Docker Context
+        // ====================================================================
+        stage('Download Docker Context') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "STAGE 2: Download Docker Context"
+                    echo "=========================================="
+                    
+                    // Convert group ID to path format (com.chat -> com/chat)
+                    def groupPath = params.GROUP_ID.replace('.', '/')
+                    
+                    // Construct download URL - docker-context uses BUILD_LABEL, stored under FULL_VERSION path
+                    def contextZipUrl = "https://${params.ARTIFACTORY_MAVEN_URL}/hello-world/${groupPath}/${params.ARTIFACT_ID}/${params.FULL_VERSION}/docker-context-${params.BUILD_LABEL}.zip"
+                    def contextZipFile = "docker-context-${params.BUILD_LABEL}.zip"
+                    
+                    echo "Downloading docker-context.zip from Artifactory..."
+                    echo "URL: ${contextZipUrl}"
+                    echo "File: ${contextZipFile}"
+                    echo ""
+                    echo "Note: docker-context filename uses BUILD_LABEL (${params.BUILD_LABEL})"
+                    echo "      but is stored under FULL_VERSION path (${params.FULL_VERSION})"
+                    
+                    // Download docker-context.zip
+                    sh """
+                        curl -f -u ${ARTIFACTORY_CREDS_USR}:${ARTIFACTORY_CREDS_PSW} \
+                            -o ${contextZipFile} \
+                            "${contextZipUrl}"
+                    """
+                    
+                    // Verify download
+                    sh """
+                        if [ ! -f ${contextZipFile} ]; then
+                            echo "ERROR: Failed to download ${contextZipFile}"
+                            exit 1
+                        fi
+                        
+                        echo "Download successful!"
+                        ls -lh ${contextZipFile}
+                    """
+                    
+                    echo "=========================================="
+                }
+            }
+        }
+        
+        // ====================================================================
+        // Stage 3: Extract Context
+        // ====================================================================
+        stage('Extract Context') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "STAGE 3: Extract Docker Context"
+                    echo "=========================================="
+                    
+                    def contextZipFile = "docker-context-${params.BUILD_LABEL}.zip"
+                    
+                    echo "Extracting ${contextZipFile}..."
+                    
+                    // Extract docker-context.zip
+                    sh """
+                        unzip -o ${contextZipFile}
+                        
+                        echo ""
+                        echo "Extracted files:"
+                        ls -lh
+                    """
+                    
+                    // Verify required files exist
+                    sh """
+                        echo ""
+                        echo "Verifying required files..."
+                        
+                        if [ ! -f Dockerfile ]; then
+                            echo "ERROR: Dockerfile not found in docker-context.zip"
+                            exit 1
+                        fi
+                        echo "✓ Dockerfile found"
+                        
+                        if [ ! -f entrypoint.sh ]; then
+                            echo "ERROR: entrypoint.sh not found in docker-context.zip"
+                            exit 1
+                        fi
+                        echo "✓ entrypoint.sh found"
+                        
+                        if [ ! -f .dockerignore ]; then
+                            echo "WARNING: .dockerignore not found (optional)"
+                        else
+                            echo "✓ .dockerignore found"
+                        fi
+                        
+                        echo ""
+                        echo "All required files verified!"
+                    """
+                    
+                    // Display Dockerfile content for verification
+                    echo ""
+                    echo "Dockerfile preview (first 20 lines):"
+                    sh "head -20 Dockerfile"
+                    
+                    echo "=========================================="
+                }
+            }
+        }
+        
+        // ====================================================================
+        // Stage 4: Build Docker Image
+        // ====================================================================
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "STAGE 4: Build Docker Image"
+                    echo "=========================================="
+                    
+                    // Convert group ID to path format (com.chat -> com/chat)
+                    def groupPath = params.GROUP_ID.replace('.', '/')
+                    
+                    echo "Building Docker image..."
+                    echo "Image: ${params.IMAGE_NAME}:${params.BUILD_LABEL}"
+                    echo ""
+                    echo "Build arguments:"
+                    echo "  ARTIFACTORY_USER: ${ARTIFACTORY_CREDS_USR}"
+                    echo "  ARTIFACTORY_MAVEN_URL: ${params.ARTIFACTORY_MAVEN_URL}"
+                    echo "  GROUP_ID: ${groupPath}"
+                    echo "  ARTIFACT_ID: ${params.ARTIFACT_ID}"
+                    echo "  FULL_VERSION: ${params.FULL_VERSION} (used for Artifactory path)"
+                    echo "  BUILD_LABEL: ${params.BUILD_LABEL} (used for JAR filename and image tag)"
+                    echo "  GIT_COMMIT_SHA: ${env.GIT_COMMIT_SHA}"
+                    echo "  GIT_BRANCH: ${env.GIT_BRANCH}"
+                    echo "  GIT_TAG: ${env.GIT_TAG}"
+                    echo "  GIT_REPOSITORY: ${env.GIT_REPOSITORY}"
+                    echo ""
+                    echo "JAR will be downloaded as: ${params.ARTIFACT_ID}-${params.BUILD_LABEL}.jar"
+                    echo "From path: hello-world/${groupPath}/${params.ARTIFACT_ID}/${params.FULL_VERSION}/"
+                    echo ""
+                    
+                    // Build Docker image with all required build args
+                    sh """
+                        docker build \
+                            --build-arg ARTIFACTORY_USER=${ARTIFACTORY_CREDS_USR} \
+                            --build-arg ARTIFACTORY_PASSWORD=${ARTIFACTORY_CREDS_PSW} \
+                            --build-arg ARTIFACTORY_MAVEN_URL=${params.ARTIFACTORY_MAVEN_URL} \
+                            --build-arg GROUP_ID=${groupPath} \
+                            --build-arg ARTIFACT_ID=${params.ARTIFACT_ID} \
+                            --build-arg FULL_VERSION=${params.FULL_VERSION} \
+                            --build-arg BUILD_LABEL=${params.BUILD_LABEL} \
+                            --build-arg GIT_COMMIT_SHA=${env.GIT_COMMIT_SHA} \
+                            --build-arg GIT_BRANCH=${env.GIT_BRANCH} \
+                            --build-arg GIT_TAG=${env.GIT_TAG} \
+                            --build-arg GIT_REPOSITORY=${env.GIT_REPOSITORY} \
+                            -t ${params.IMAGE_NAME}:${params.BUILD_LABEL} \
+                            .
+                    """
+                    
+                    // Verify image was created
+                    sh """
+                        echo ""
+                        echo "Verifying image creation..."
+                        docker images | grep ${params.IMAGE_NAME} | grep ${params.BUILD_LABEL}
+                        
+                        echo ""
+                        echo "Image built successfully!"
+                    """
+                    
+                    echo "=========================================="
+                }
+            }
+        }
+        
+        // ====================================================================
+        // Stage 5: Tag Image
+        // ====================================================================
+        stage('Tag Image') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "STAGE 5: Tag Docker Image"
+                    echo "=========================================="
+                    
+                    echo "Tagging image with BUILD_LABEL and latest..."
+                    
+                    // Tag with full registry path and BUILD_LABEL
+                    sh """
+                        docker tag ${params.IMAGE_NAME}:${params.BUILD_LABEL} \
+                            ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}
+                        
+                        echo "✓ Tagged: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}"
+                    """
+                    
+                    // Tag as latest
+                    sh """
+                        docker tag ${params.IMAGE_NAME}:${params.BUILD_LABEL} \
+                            ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest
+                        
+                        echo "✓ Tagged: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest"
+                    """
+                    
+                    // Display all tags
+                    echo ""
+                    echo "All tags for this image:"
+                    sh "docker images | grep ${params.IMAGE_NAME}"
+                    
+                    echo "=========================================="
+                }
+            }
+        }
+        
+        // ====================================================================
+        // Stage 6: Push to Registry
+        // ====================================================================
+        // stage('Push to Registry') {
+        //     steps {
+        //         script {
+        //             echo "=========================================="
+        //             echo "STAGE 6: Push to Docker Registry"
+        //             echo "=========================================="
+                    
+        //             echo "Logging in to Docker registry..."
+        //             echo "Registry: ${DOCKER_REGISTRY}"
+                    
+        //             // Login to Docker registry
+        //             sh """
+        //                 echo ${ARTIFACTORY_CREDS_PSW} | docker login ${DOCKER_REGISTRY} \
+        //                     -u ${ARTIFACTORY_CREDS_USR} \
+        //                     --password-stdin
+        //             """
+                    
+        //             echo ""
+        //             echo "Pushing versioned image (tagged with BUILD_LABEL)..."
+        //             // Push versioned image
+        //             sh """
+        //                 docker push ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}
+        //                 echo "✓ Pushed: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}"
+        //             """
+                    
+        //             echo ""
+        //             echo "Pushing latest image..."
+        //             // Push latest image
+        //             sh """
+        //                 docker push ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest
+        //                 echo "✓ Pushed: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest"
+        //             """
+                    
+        //             echo ""
+        //             echo "Logging out from Docker registry..."
+        //             // Logout
+        //             sh """
+        //                 docker logout ${DOCKER_REGISTRY}
+        //             """
+                    
+        //             echo ""
+        //             echo "Images successfully pushed to registry!"
+        //             echo "=========================================="
+        //         }
+        //     }
+        // }
+    }
+    
+    // ========================================================================
+    // Post-Build Actions
+    // ========================================================================
+    post {
+        success {
+            script {
+                echo "=========================================="
+                echo "✅ PIPELINE SUCCESS"
+                echo "=========================================="
+                echo "Docker image built and pushed successfully!"
+                echo ""
+                echo "Artifacts:"
+                echo "  • ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}"
+                echo "  • ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest"
+                echo ""
+                echo "Pull command:"
+                echo "  docker pull ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}"
+                echo ""
+                echo "Run command:"
+                echo "  docker run -p 8080:8080 ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}"
+                echo "=========================================="
+            }
+        }
+        
+        failure {
+            script {
+                echo "=========================================="
+                echo "❌ PIPELINE FAILED"
+                echo "=========================================="
+                echo "Docker build or push failed!"
+                echo "Check the logs above for details."
+                echo "=========================================="
+            }
+        }
+        
+        always {
+            script {
+                echo "=========================================="
+                echo "CLEANUP"
+                echo "=========================================="
+                
+                // Clean up local Docker images to save space
+                if (env.WORKSPACE_CLEAN == 'true') {
+                    echo "Cleaning up local Docker images..."
+                    sh """
+                        # Remove untagged images
+                        docker images -f "dangling=true" -q | xargs -r docker rmi || true
+                        
+                        # Remove local build images (keep registry images)
+                        docker rmi ${params.IMAGE_NAME}:${params.BUILD_LABEL} || true
+                        
+                        echo "Cleanup complete!"
+                    """
+                } else {
+                    echo "Workspace cleanup disabled."
+                }
+                
+                echo "=========================================="
+            }
+        }
+    }
+}
