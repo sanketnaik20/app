@@ -17,7 +17,7 @@ pipeline {
         string(
             name: 'FULL_VERSION',
             defaultValue: '',
-            description: 'Full version from Pipeline 1 (e.g., 1.0.0-20260129). Required.'
+            description: 'Full version from Pipeline 1 (e.g., 1.0.0)'
         )
         string(
             name: 'BUILD_LABEL',
@@ -41,7 +41,7 @@ pipeline {
         )
         string(
             name: 'ARTIFACTORY_DOCKER_URL',
-            defaultValue: 'na.artifactory.swg-devops.com/artifactory/ip-devops-team-sandbox-dev-docker-local',
+            defaultValue: 'docker-na-public.artifactory.swg-devops.com/ip-devops-team-sandbox-dev-docker-local/test',
             description: 'Artifactory Docker registry URL'
         )
         string(
