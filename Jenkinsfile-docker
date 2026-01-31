@@ -300,90 +300,90 @@ pipeline {
         // ====================================================================
         // Stage 5: Tag Image
         // ====================================================================
-        // stage('Tag Image') {
-        //     steps {
-        //         script {
-        //             echo "=========================================="
-        //             echo "STAGE 5: Tag Docker Image"
-        //             echo "=========================================="
+        stage('Tag Image') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "STAGE 5: Tag Docker Image"
+                    echo "=========================================="
                     
-        //             echo "Tagging image with BUILD_LABEL and latest..."
+                    echo "Tagging image with BUILD_LABEL and latest..."
                     
-        //             // Tag with full registry path and BUILD_LABEL
-        //             sh """
-        //                 docker tag ${params.IMAGE_NAME}:${params.BUILD_LABEL} \
-        //                     ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}
+                    // Tag with full registry path and BUILD_LABEL
+                    sh """
+                        docker tag ${params.IMAGE_NAME}:${params.BUILD_LABEL} \
+                            ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}
                         
-        //                 echo "✓ Tagged: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}"
-        //             """
+                        echo "✓ Tagged: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}"
+                    """
                     
-        //             // Tag as latest
-        //             sh """
-        //                 docker tag ${params.IMAGE_NAME}:${params.BUILD_LABEL} \
-        //                     ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest
+                    // Tag as latest
+                    sh """
+                        docker tag ${params.IMAGE_NAME}:${params.BUILD_LABEL} \
+                            ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest
                         
-        //                 echo "✓ Tagged: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest"
-        //             """
+                        echo "✓ Tagged: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest"
+                    """
                     
-        //             // Display all tags
-        //             echo ""
-        //             echo "All tags for this image:"
-        //             sh "docker images | grep ${params.IMAGE_NAME}"
+                    // Display all tags
+                    echo ""
+                    echo "All tags for this image:"
+                    sh "docker images | grep ${params.IMAGE_NAME}"
                     
-        //             echo "=========================================="
-        //         }
-        //     }
-        // }
+                    echo "=========================================="
+                }
+            }
+        }
         
         // ====================================================================
         // Stage 6: Push to Registry
         // ====================================================================
-        // stage('Push to Registry') {
-        //     steps {
-        //         script {
-        //             echo "=========================================="
-        //             echo "STAGE 6: Push to Docker Registry"
-        //             echo "=========================================="
+        stage('Push to Registry') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "STAGE 6: Push to Docker Registry"
+                    echo "=========================================="
                     
-        //             echo "Logging in to Docker registry..."
-        //             echo "Registry: ${DOCKER_REGISTRY}"
+                    echo "Logging in to Docker registry..."
+                    echo "Registry: ${DOCKER_REGISTRY}"
                     
-        //             // Login to Docker registry
-        //             sh """
-        //                 echo ${ARTIFACTORY_CREDS_PSW} | docker login ${DOCKER_REGISTRY} \
-        //                     -u ${ARTIFACTORY_CREDS_USR} \
-        //                     --password-stdin
-        //             """
+                    // Login to Docker registry
+                    sh """
+                        echo ${ARTIFACTORY_CREDS_PSW} | docker login ${DOCKER_REGISTRY} \
+                            -u ${ARTIFACTORY_CREDS_USR} \
+                            --password-stdin
+                    """
                     
-        //             echo ""
-        //             echo "Pushing versioned image (tagged with BUILD_LABEL)..."
-        //             // Push versioned image
-        //             sh """
-        //                 docker push ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}
-        //                 echo "✓ Pushed: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}"
-        //             """
+                    echo ""
+                    echo "Pushing versioned image (tagged with BUILD_LABEL)..."
+                    // Push versioned image
+                    sh """
+                        docker push ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}
+                        echo "✓ Pushed: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}"
+                    """
                     
-        //             echo ""
-        //             echo "Pushing latest image..."
-        //             // Push latest image
-        //             sh """
-        //                 docker push ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest
-        //                 echo "✓ Pushed: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest"
-        //             """
+                    echo ""
+                    echo "Pushing latest image..."
+                    // Push latest image
+                    sh """
+                        docker push ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest
+                        echo "✓ Pushed: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest"
+                    """
                     
-        //             echo ""
-        //             echo "Logging out from Docker registry..."
-        //             // Logout
-        //             sh """
-        //                 docker logout ${DOCKER_REGISTRY}
-        //             """
+                    echo ""
+                    echo "Logging out from Docker registry..."
+                    // Logout
+                    sh """
+                        docker logout ${DOCKER_REGISTRY}
+                    """
                     
-        //             echo ""
-        //             echo "Images successfully pushed to registry!"
-        //             echo "=========================================="
-        //         }
-        //     }
-        // }
+                    echo ""
+                    echo "Images successfully pushed to registry!"
+                    echo "=========================================="
+                }
+            }
+        }
     }
     
     // ========================================================================
