@@ -317,13 +317,13 @@ pipeline {
                         echo "✓ Tagged: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}"
                     """
                     
-                    // Tag as latest
-                    sh """
-                        docker tag ${params.IMAGE_NAME}:${params.BUILD_LABEL} \
-                            ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest
+                    // // Tag as latest
+                    // sh """
+                    //     docker tag ${params.IMAGE_NAME}:${params.BUILD_LABEL} \
+                    //         ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest
                         
-                        echo "✓ Tagged: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest"
-                    """
+                    //     echo "✓ Tagged: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest"
+                    // """
                     
                     // Display all tags
                     echo ""
@@ -363,13 +363,13 @@ pipeline {
                         echo "✓ Pushed: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}"
                     """
                     
-                    echo ""
-                    echo "Pushing latest image..."
-                    // Push latest image
-                    sh """
-                        docker push ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest
-                        echo "✓ Pushed: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest"
-                    """
+                    // echo ""
+                    // echo "Pushing latest image..."
+                    // // Push latest image
+                    // sh """
+                    //     docker push ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest
+                    //     echo "✓ Pushed: ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest"
+                    // """
                     
                     echo ""
                     echo "Logging out from Docker registry..."
@@ -395,12 +395,12 @@ pipeline {
                 echo "=========================================="
                 echo "✅ PIPELINE SUCCESS"
                 echo "=========================================="
-                // echo "Docker image built and pushed successfully!"
+                echo "Docker image built and pushed successfully!"
                 // echo ""
                 // echo "Artifacts:"
                 // echo "  • ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}"
-                // echo "  • ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest"
-                // echo ""
+                // // echo "  • ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:latest"
+                // // echo ""
                 // echo "Pull command:"
                 // echo "  docker pull ${DOCKER_REGISTRY}/${params.IMAGE_NAME}:${params.BUILD_LABEL}"
                 // echo ""
@@ -421,30 +421,30 @@ pipeline {
             }
         }
         
-        // always {
-        //     script {
-        //         echo "=========================================="
-        //         echo "CLEANUP"
-        //         echo "=========================================="
+        always {
+            script {
+                echo "=========================================="
+                echo "CLEANUP"
+                echo "=========================================="
                 
-        //         // Clean up local Docker images to save space
-        //         if (env.WORKSPACE_CLEAN == 'true') {
-        //             echo "Cleaning up local Docker images..."
-        //             sh """
-        //                 # Remove untagged images
-        //                 docker images -f "dangling=true" -q | xargs -r docker rmi || true
+                // Clean up local Docker images to save space
+                if (env.WORKSPACE_CLEAN == 'true') {
+                    echo "Cleaning up local Docker images..."
+                    sh """
+                        # Remove untagged images
+                        docker images -f "dangling=true" -q | xargs -r docker rmi || true
                         
-        //                 # Remove local build images (keep registry images)
-        //                 docker rmi ${params.IMAGE_NAME}:${params.BUILD_LABEL} || true
+                        # Remove local build images (keep registry images)
+                        docker rmi ${params.IMAGE_NAME}:${params.BUILD_LABEL} || true
                         
-        //                 echo "Cleanup complete!"
-        //             """
-        //         } else {
-        //             echo "Workspace cleanup disabled."
-        //         }
+                        echo "Cleanup complete!"
+                    """
+                } else {
+                    echo "Workspace cleanup disabled."
+                }
                 
-        //         echo "=========================================="
-        //     }
-        // }
+                echo "=========================================="
+            }
+        }
     }
 }
