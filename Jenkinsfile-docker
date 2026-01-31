@@ -235,67 +235,67 @@ pipeline {
         // ====================================================================
         // Stage 4: Build Docker Image
         // ====================================================================
-        // stage('Build Docker Image') {
-        //     steps {
-        //         script {
-        //             echo "=========================================="
-        //             echo "STAGE 4: Build Docker Image"
-        //             echo "=========================================="
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "STAGE 4: Build Docker Image"
+                    echo "=========================================="
                     
-        //             // Convert group ID to path format (com.chat -> com/chat)
-        //             def groupPath = params.GROUP_ID.replace('.', '/')
+                    // Convert group ID to path format (com.chat -> com/chat)
+                    def groupPath = params.GROUP_ID.replace('.', '/')
                     
-        //             echo "Building Docker image..."
-        //             echo "Image: ${params.IMAGE_NAME}:${params.BUILD_LABEL}"
-        //             echo ""
-        //             echo "Build arguments:"
-        //             echo "  ARTIFACTORY_USER: ${ARTIFACTORY_CREDS_USR}"
-        //             echo "  ARTIFACTORY_MAVEN_URL: ${params.ARTIFACTORY_MAVEN_URL}"
-        //             echo "  GROUP_ID: ${groupPath}"
-        //             echo "  ARTIFACT_ID: ${params.ARTIFACT_ID}"
-        //             echo "  FULL_VERSION: ${params.FULL_VERSION} (used for Artifactory path)"
-        //             echo "  BUILD_LABEL: ${params.BUILD_LABEL} (used for JAR filename and image tag)"
-        //             echo "  GIT_COMMIT_SHA: ${env.GIT_COMMIT_SHA}"
-        //             echo "  GIT_BRANCH: ${env.GIT_BRANCH}"
-        //             echo "  GIT_TAG: ${env.GIT_TAG}"
-        //             echo "  GIT_REPOSITORY: ${env.GIT_REPOSITORY}"
-        //             echo ""
-        //             echo "JAR will be downloaded as: ${params.ARTIFACT_ID}-${params.BUILD_LABEL}.jar"
-        //             echo "From path: hello-world/${groupPath}/${params.ARTIFACT_ID}/${params.FULL_VERSION}/"
-        //             echo ""
+                    echo "Building Docker image..."
+                    echo "Image: ${params.IMAGE_NAME}:${params.BUILD_LABEL}"
+                    echo ""
+                    echo "Build arguments:"
+                    echo "  ARTIFACTORY_USER: ${ARTIFACTORY_CREDS_USR}"
+                    echo "  ARTIFACTORY_MAVEN_URL: ${params.ARTIFACTORY_MAVEN_URL}"
+                    echo "  GROUP_ID: ${groupPath}"
+                    echo "  ARTIFACT_ID: ${params.ARTIFACT_ID}"
+                    echo "  FULL_VERSION: ${params.FULL_VERSION} (used for Artifactory path)"
+                    echo "  BUILD_LABEL: ${params.BUILD_LABEL} (used for JAR filename and image tag)"
+                    echo "  GIT_COMMIT_SHA: ${env.GIT_COMMIT_SHA}"
+                    echo "  GIT_BRANCH: ${env.GIT_BRANCH}"
+                    echo "  GIT_TAG: ${env.GIT_TAG}"
+                    echo "  GIT_REPOSITORY: ${env.GIT_REPOSITORY}"
+                    echo ""
+                    echo "JAR will be downloaded as: ${params.ARTIFACT_ID}-${params.BUILD_LABEL}.jar"
+                    echo "From path: hello-world/${groupPath}/${params.ARTIFACT_ID}/${params.FULL_VERSION}/"
+                    echo ""
                     
-        //             // Build Docker image with all required build args
-        //             sh """
-        //                 docker build \
-        //                     --build-arg ARTIFACTORY_USER=${ARTIFACTORY_CREDS_USR} \
-        //                     --build-arg ARTIFACTORY_PASSWORD=${ARTIFACTORY_CREDS_PSW} \
-        //                     --build-arg ARTIFACTORY_MAVEN_URL=${params.ARTIFACTORY_MAVEN_URL} \
-        //                     --build-arg GROUP_ID=${groupPath} \
-        //                     --build-arg ARTIFACT_ID=${params.ARTIFACT_ID} \
-        //                     --build-arg FULL_VERSION=${params.FULL_VERSION} \
-        //                     --build-arg BUILD_LABEL=${params.BUILD_LABEL} \
-        //                     --build-arg GIT_COMMIT_SHA=${env.GIT_COMMIT_SHA} \
-        //                     --build-arg GIT_BRANCH=${env.GIT_BRANCH} \
-        //                     --build-arg GIT_TAG=${env.GIT_TAG} \
-        //                     --build-arg GIT_REPOSITORY=${env.GIT_REPOSITORY} \
-        //                     -t ${params.IMAGE_NAME}:${params.BUILD_LABEL} \
-        //                     .
-        //             """
+                    // Build Docker image with all required build args
+                    sh """
+                        docker build \
+                            --build-arg ARTIFACTORY_USER=${ARTIFACTORY_CREDS_USR} \
+                            --build-arg ARTIFACTORY_PASSWORD=${ARTIFACTORY_CREDS_PSW} \
+                            --build-arg ARTIFACTORY_MAVEN_URL=${params.ARTIFACTORY_MAVEN_URL} \
+                            --build-arg GROUP_ID=${groupPath} \
+                            --build-arg ARTIFACT_ID=${params.ARTIFACT_ID} \
+                            --build-arg FULL_VERSION=${params.FULL_VERSION} \
+                            --build-arg BUILD_LABEL=${params.BUILD_LABEL} \
+                            --build-arg GIT_COMMIT_SHA=${env.GIT_COMMIT_SHA} \
+                            --build-arg GIT_BRANCH=${env.GIT_BRANCH} \
+                            --build-arg GIT_TAG=${env.GIT_TAG} \
+                            --build-arg GIT_REPOSITORY=${env.GIT_REPOSITORY} \
+                            -t ${params.IMAGE_NAME}:${params.BUILD_LABEL} \
+                            .
+                    """
                     
-        //             // Verify image was created
-        //             sh """
-        //                 echo ""
-        //                 echo "Verifying image creation..."
-        //                 docker images | grep ${params.IMAGE_NAME} | grep ${params.BUILD_LABEL}
+                    // Verify image was created
+                    sh """
+                        echo ""
+                        echo "Verifying image creation..."
+                        docker images | grep ${params.IMAGE_NAME} | grep ${params.BUILD_LABEL}
                         
-        //                 echo ""
-        //                 echo "Image built successfully!"
-        //             """
+                        echo ""
+                        echo "Image built successfully!"
+                    """
                     
-        //             echo "=========================================="
-        //         }
-        //     }
-        // }
+                    echo "=========================================="
+                }
+            }
+        }
         
         // ====================================================================
         // Stage 5: Tag Image
