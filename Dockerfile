@@ -18,6 +18,7 @@ ARG ARTIFACTORY_PASSWORD
 ARG ARTIFACTORY_MAVEN_URL=na.artifactory.swg-devops.com/artifactory/ip-devops-team-sandbox-maven-local
 ARG GROUP_ID=com/chat
 ARG ARTIFACT_ID=app
+ARG BUILD_LABEL
 ARG FULL_VERSION
 
 # Install only what is needed to download artifacts in the initial container
